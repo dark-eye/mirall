@@ -2,7 +2,6 @@
 *build*/
 *flymake*
 CMakeLists.txt.user*
-*.patch
 *~
 *.autosave
 doc/_build/*
@@ -79,7 +78,7 @@ dlldata.c
 *.scc
 
 # Mac OS X specific
-shell_integration/MacOSX/LiferayNativity.xcworkspace/xcuserdata/
+shell_integration/MacOSX/*.xcworkspace/xcuserdata/
 **/.DS_Store
 
 # Visual C++ cache files

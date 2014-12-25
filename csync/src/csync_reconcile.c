@@ -134,6 +134,15 @@ static int _csync_merge_algorithm_visitor(void *obj, void *data) {
             break;
             /* file has been removed on the opposite replica */
         case CSYNC_INSTRUCTION_NONE:
+            if (cur->has_ignored_files) {
+                /* Do not remove a directory that has ignored files */
+                break;
+            }
+            if (cur->child_modified) {
+                /* re-create directory that has modified contents */
+                cur->instruction = CSYNC_INSTRUCTION_NEW;
+                break;
+            }
             cur->instruction = CSYNC_INSTRUCTION_REMOVE;
             break;
         case CSYNC_INSTRUCTION_EVAL_RENAME:
@@ -245,6 +254,10 @@ static int _csync_merge_algorithm_visitor(void *obj, void *data) {
                     is_equal_files = (other->modtime == cur->modtime);
                 } else {
                     is_equal_files = ((other->size == cur->size) && (other->modtime == cur->modtime));
+                    // FIXME: do a binary comparision of the file here because of the following
+                    // edge case:
+                    // The files could still have different content, even though the mtime
+                    // and size are the same.
                 }
                 if (is_equal_files) {
                     /* The files are considered equal. */

@@ -6,6 +6,7 @@
 !insertmacro MUI_LANGUAGE "SpanishInternational"
 !insertmacro MUI_LANGUAGE "Dutch"
 !insertmacro MUI_LANGUAGE "Hungarian"
+!insertmacro MUI_LANGUAGE "Ukrainian"
 !insertmacro MUI_LANGUAGE "French"
 !insertmacro MUI_LANGUAGE "Catalan"
 !insertmacro MUI_LANGUAGE "Russian"
@@ -23,3 +24,4 @@
 !insertmacro MUI_LANGUAGE "Slovak"
 !insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "Polish"
+!insertmacro MUI_LANGUAGE "Farsi"

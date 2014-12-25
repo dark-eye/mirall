@@ -10,7 +10,7 @@ SYNOPSIS
 DESCRIPTION
 ===========
 owncloudcmd is the command line tool used for the ownCloud file synchronization
-desktop utility.  This command line tool is based on mirall.
+desktop utility.
 
 Contrary to the :manpage:`owncloud(1)` GUI client, `owncloudcmd` only performs
 a single sync run and then exits. In so doing, `owncloudcmd` replaces the
@@ -29,11 +29,23 @@ the server URL.
 
 OPTIONS
 =======
-``--confdir`` `PATH`
-       Specifies the configuration directory where `csync.conf` is located.
+``--user``, ``-u`` ``[user]``
+       Use ``user`` as the login name.
 
-``--silent``
+``--password``, ``-p`` ``[password]``
+       Use ``password`` as the password.
+
+``-n``
+       Use ``netrc (5)`` for login.
+
+``--non-interactive``
+       Do not prompt for questions.
+
+``--silent``, ``--s``
        Inhibits verbose log output.
+
+``--trust``
+       Trust any SSL certificate, including invalid ones.
 
 ``--httpproxy  http://[user@pass:]<server>:<port>``
       Uses ``server`` as HTTP proxy.
@@ -48,6 +60,8 @@ the command line would be::
                 $HOME/media/music \
                 https://server/owncloud/remote.php/webdav/Music
 
+``owncloudcmd`` will enquire user name and password, unless they have
+been specified on the command line or ``-n`` (see `netrc(5)`) has been passed.
 
 Using the legacy scheme, it would be::
 
@@ -58,7 +72,7 @@ Using the legacy scheme, it would be::
 
 BUGS
 ====
-Please report bugs at https://github.com/owncloud/mirall/issues.
+Please report bugs at https://github.com/owncloud/client/issues.
 
 SEE ALSO
 ========

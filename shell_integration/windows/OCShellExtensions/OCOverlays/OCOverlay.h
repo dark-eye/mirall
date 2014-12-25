@@ -35,18 +35,15 @@ public:
     IFACEMETHODIMP_(ULONG) Release();
 
 protected:
-    ~OCOverlay(void);
+    ~OCOverlay();
 
 private:
 	//bool _GenerateMessage(const wchar_t*, std::wstring*);
 
 	bool _IsOverlaysEnabled();
     long _referenceCount;
-	CommunicationSocket* _communicationSocket;
 	RemotePathChecker* _checker;
 	int _state;
-
-	std::vector<std::wstring> _watchedDirectories;
 };
 
 #endif

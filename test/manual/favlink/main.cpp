@@ -10,7 +10,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
  * for more details.
  */
-#include "../../../src/mirall/utility.h"
+#include "../../../src/utility.h"
 
 #include <QDir>
 
@@ -18,5 +18,5 @@ int main(int argc, char* argv[])
 {
    QString dir="/tmp/linktest/";
    QDir().mkpath(dir);
-   Mirall::Utility::setupFavLink(dir);
+   OCC::Utility::setupFavLink(dir);
 }

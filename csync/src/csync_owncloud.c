@@ -24,6 +24,8 @@
 
 #include <inttypes.h>
 
+#include "csync_private.h"
+
 
 /*
  * helper method to build up a user text for SSL problems, called from the
@@ -108,7 +110,7 @@ static int ssl_callback_by_neon(void *userdata, int failures,
         }
     }
     DEBUG_WEBDAV("## VERIFY_SSL CERT: %d", ret  );
-      return ret;
+    return ret;
 }
 
 /*
@@ -430,6 +432,8 @@ static int dav_connect(csync_owncloud_ctx_t *ctx,  const char *base_url) {
         ne_set_read_timeout(ctx->dav_session.ctx, ctx->dav_session.read_timeout);
         DEBUG_WEBDAV("Timeout set to %u seconds", ctx->dav_session.read_timeout );
     }
+    // Should never take more than some seconds, 30 is really a max.
+    ne_set_connect_timeout(ctx->dav_session.ctx, 30);
 
     snprintf( uaBuf, sizeof(uaBuf), "Mozilla/5.0 (%s) csyncoC/%s",
               csync_owncloud_get_platform(), CSYNC_STRINGIFY( LIBCSYNC_VERSION ));
@@ -535,6 +539,11 @@ static struct listdir_context *fetch_resource_list(csync_owncloud_ctx_t *ctx, co
             SAFE_FREE(curi);
             return ctx->propfind_cache;
         }
+    }
+
+    if( ctx->csync_ctx->callbacks.update_callback ) {
+	ctx->csync_ctx->callbacks.update_callback(false, curi, 
+              ctx->csync_ctx->callbacks.update_callback_userdata);
     }
 
     fetchCtx = c_malloc( sizeof( struct listdir_context ));
@@ -721,6 +730,14 @@ csync_vio_file_stat_t *owncloud_readdir(CSYNC *ctx, csync_vio_handle_t *dhandle)
 
             SAFE_FREE( escaped_path );
             return lfs;
+        } else {
+            /* The first item is the root item, memorize its permissions */
+            if (!ctx->remote.root_perms) {
+                if (strlen(currResource->remotePerm) > 0) {
+                    /* Only copy if permissions contain something. Empty string means server didn't return them */
+                    ctx->remote.root_perms = c_strdup(currResource->remotePerm);
+                }
+            }
         }
 
         /* This is the target URI */
@@ -752,6 +769,7 @@ int owncloud_commit(CSYNC* ctx) {
     }
 
     ctx->owncloud_context->is_first_propfind = true;
+    ctx->owncloud_context->dav_session.no_recursive_propfind = true;
   /* DEBUG_WEBDAV( "********** vio_module_shutdown" ); */
 
   ctx->owncloud_context->dav_session.ctx = 0;

@@ -40,28 +40,31 @@
 #define CSYNC_LOG_CATEGORY_NAME "csync.exclude"
 #include "csync_log.h"
 
-static int _csync_exclude_add(CSYNC *ctx, const char *string) {
+#ifndef NDEBUG
+static
+#endif
+int _csync_exclude_add(c_strlist_t **inList, const char *string) {
     c_strlist_t *list;
 
-    if (ctx->excludes == NULL) {
-        ctx->excludes = c_strlist_new(32);
-        if (ctx->excludes == NULL) {
+    if (*inList == NULL) {
+        *inList = c_strlist_new(32);
+        if (*inList == NULL) {
             return -1;
         }
     }
 
-    if (ctx->excludes->count == ctx->excludes->size) {
-        list = c_strlist_expand(ctx->excludes, 2 * ctx->excludes->size);
+    if ((*inList)->count == (*inList)->size) {
+        list = c_strlist_expand(*inList, 2 * (*inList)->size);
         if (list == NULL) {
             return -1;
         }
-        ctx->excludes = list;
+        *inList = list;
     }
 
-    return c_strlist_add(ctx->excludes, string);
+    return c_strlist_add(*inList, string);
 }
 
-int csync_exclude_load(CSYNC *ctx, const char *fname) {
+int csync_exclude_load(const char *fname, c_strlist_t **list) {
   int fd = -1;
   int i = 0;
   int rc = -1;
@@ -70,7 +73,7 @@ int csync_exclude_load(CSYNC *ctx, const char *fname) {
   char *entry = NULL;
   mbchar_t *w_fname;
 
-  if (ctx == NULL || fname == NULL) {
+  if (fname == NULL) {
       return -1;
   }
 
@@ -119,7 +122,7 @@ int csync_exclude_load(CSYNC *ctx, const char *fname) {
         buf[i] = '\0';
         if (*entry != '#') {
           CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "Adding entry: %s", entry);
-          rc = _csync_exclude_add(ctx, entry);
+          rc = _csync_exclude_add(list, entry);
           if (rc < 0) {
               goto out;
           }
@@ -145,6 +148,49 @@ void csync_exclude_destroy(CSYNC *ctx) {
 }
 
 CSYNC_EXCLUDE_TYPE csync_excluded(CSYNC *ctx, const char *path, int filetype) {
+
+    CSYNC_EXCLUDE_TYPE match = CSYNC_NOT_EXCLUDED;
+
+    match = csync_excluded_no_ctx( ctx->excludes, path, filetype );
+
+    return match;
+}
+
+// See http://support.microsoft.com/kb/74496
+static const char *win_reserved_words[] = {"CON","PRN","AUX", "NUL",
+                                           "COM1", "COM2", "COM3", "COM4",
+                                           "LPT1", "LPT2", "LPT3", "CLOCK$" };
+
+
+bool csync_is_windows_reserved_word(const char* filename) {
+
+  size_t win_reserve_words_len = sizeof(win_reserved_words) / sizeof(char*);
+  size_t j;
+
+  for (j = 0; j < win_reserve_words_len; j++) {
+    int len_reserved_word = strlen(win_reserved_words[j]);
+    int len_filename = strlen(filename);
+    if (len_filename == 2 && filename[1] == ':') {
+        if (filename[0] >= 'a' && filename[0] <= 'z') {
+            return true;
+        }
+        if (filename[0] >= 'A' && filename[0] <= 'Z') {
+            return true;
+        }
+    }
+    if (c_strncasecmp(filename, win_reserved_words[j], len_reserved_word) == 0) {
+        if (len_filename == len_reserved_word) {
+            return true;
+        }
+        if ((len_filename > len_reserved_word) && (filename[len_reserved_word] == '.')) {
+            return true;
+        }
+    }
+  }
+  return false;
+}
+
+CSYNC_EXCLUDE_TYPE csync_excluded_no_ctx(c_strlist_t *excludes, const char *path, int filetype) {
   size_t i = 0;
   const char *p = NULL;
   char *bname = NULL;
@@ -190,6 +236,27 @@ CSYNC_EXCLUDE_TYPE csync_excluded(CSYNC *ctx, const char *path, int filetype) {
       goto out;
   }
 
+#ifdef _WIN32
+  // Windows cannot sync files ending in spaces (#2176). It also cannot
+  // distinguish files ending in '.' from files without an ending,
+  // as '.' is a separator that is not stored internally, so let's
+  // not allow to sync those to avoid file loss/ambiguities (#416)
+  size_t blen = strlen(bname);
+  if (blen > 1 && (bname[blen-1]== ' ' || bname[blen-1]== '.' )) {
+      match = CSYNC_FILE_EXCLUDE_INVALID_CHAR;
+      SAFE_FREE(bname);
+      SAFE_FREE(dname);
+      goto out;
+  }
+
+  if (csync_is_windows_reserved_word(bname)) {
+    match = CSYNC_FILE_EXCLUDE_INVALID_CHAR;
+    SAFE_FREE(bname);
+    SAFE_FREE(dname);
+    goto out;
+  }
+#endif
+
   rc = csync_fnmatch(".owncloudsync.log*", bname, 0);
   if (rc == 0) {
       match = CSYNC_FILE_SILENTLY_EXCLUDED;
@@ -208,7 +275,10 @@ CSYNC_EXCLUDE_TYPE csync_excluded(CSYNC *ctx, const char *path, int filetype) {
   }
 
   if (getenv("CSYNC_CONFLICT_FILE_USERNAME")) {
-      asprintf(&conflict, "*_conflict_%s-*", getenv("CSYNC_CONFLICT_FILE_USERNAME"));
+      rc = asprintf(&conflict, "*_conflict_%s-*", getenv("CSYNC_CONFLICT_FILE_USERNAME"));
+      if (rc < 0) {
+          goto out;
+      }
       rc = csync_fnmatch(conflict, path, 0);
       if (rc == 0) {
           match = CSYNC_FILE_SILENTLY_EXCLUDED;
@@ -223,14 +293,14 @@ CSYNC_EXCLUDE_TYPE csync_excluded(CSYNC *ctx, const char *path, int filetype) {
   SAFE_FREE(bname);
   SAFE_FREE(dname);
 
-  if (ctx == NULL || ctx->excludes == NULL) {
+  if( ! excludes ) {
       goto out;
   }
 
   /* Loop over all exclude patterns and evaluate the given path */
-  for (i = 0; match == CSYNC_NOT_EXCLUDED && i < ctx->excludes->count; i++) {
+  for (i = 0; match == CSYNC_NOT_EXCLUDED && i < excludes->count; i++) {
       bool match_dirs_only = false;
-      char *pattern_stored = c_strdup(ctx->excludes->vector[i]);
+      char *pattern_stored = c_strdup(excludes->vector[i]);
       char* pattern = pattern_stored;
 
       type = CSYNC_FILE_EXCLUDE_LIST;
@@ -309,6 +379,7 @@ CSYNC_EXCLUDE_TYPE csync_excluded(CSYNC *ctx, const char *path, int filetype) {
       SAFE_FREE(bname);
       SAFE_FREE(dname);
   }
+
 
 out:
 
