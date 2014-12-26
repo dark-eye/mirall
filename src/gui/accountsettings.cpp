@@ -639,12 +639,12 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
     if (Progress::isSizeDependent(curItem._instruction)) {
         QString s1 = Utility::octetsToString( curItemProgress );
         QString s2 = Utility::octetsToString( curItem._size );
-        quint64 estimatedBw = progress.getFileEstimate(curItem).getEstimatedBandwidth();
+        quint64 estimatedBw = progress.getFileEstimate(curItem).getEstimatedBandwidth(); 
         if (estimatedBw) {
             //: Example text: "uploading foobar.png (1MB of 2MB) time left 2 minutes at a rate of 24Kb/s"
-            fileProgressString = tr("%1 %2 (%3 of %4) %5 left at a rate of %6/s")
+            fileProgressString = tr("%1 %2 (%3 of %4) %5  at a rate of %6/s")
                 .arg(kindString, itemFileName, s1, s2,
-                    Utility::timeToDescriptiveString(progress.getFileEstimate(curItem).getEtaEstimate(), 3, " ", true),
+                    Progress::estimateToString(progress.getFileEstimate(curItem),3),
                     Utility::octetsToString(estimatedBw) );
         } else {
             //: Example text: "uploading foobar.png (2MB of 2MB)"
@@ -663,10 +663,11 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
     if (progress._totalSize > 0) {
         QString s1 = Utility::octetsToString( completedSize );
         QString s2 = Utility::octetsToString( progress._totalSize );
+      
         overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time left %5")
             .arg(s1, s2)
             .arg(currentFile).arg(progress._totalFileCount)
-            .arg( Utility::timeToDescriptiveString(progress.totalEstimate().getEtaEstimate(), 3, " ", true) );
+            .arg( Progress::estimateToString(progress.totalEstimate(),3) );
     } else if (progress._totalFileCount > 0) {
         // Don't attemt to estimate the time left if there is no kb to transfer.
         overallSyncString = tr("file %1 of %2") .arg(currentFile).arg(progress._totalFileCount);

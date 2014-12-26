@@ -12,6 +12,7 @@
  */
 
 #include "progressdispatcher.h"
+#include "utility.h"
 
 #include <QObject>
 #include <QMetaType>
@@ -87,6 +88,20 @@ bool Progress::isWarningKind( SyncFileItem::Status kind)
          || kind == SyncFileItem::Conflict || kind == SyncFileItem::Restoration;
 
 }
+
+QString Progress::estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision) 
+{   
+    if(!estimate.isEstimationReady()) {
+        return QCoreApplication::translate("Utility","estimating...");
+    }
+    
+    quint64 msecs = estimate.getEtaEstimate();
+    if(msecs / 1000 < Utility::timeMapping.last().second ) {
+        return QString("< " + Utility::timeMapping.last().first).arg(1);
+    }
+    return QCoreApplication::translate("Utility","%1 left").arg(Utility::timeToDescriptiveString( Utility::timeMapping , msecs, precision, " ", true) );
+}
+
 
 ProgressDispatcher* ProgressDispatcher::instance() {
     if (!_instance) {
