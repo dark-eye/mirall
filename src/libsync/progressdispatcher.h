@@ -50,14 +50,19 @@ namespace Progress
         quint64 _completedSize;
         // Should this be in a separate file?
         struct EtaEstimate {
-            EtaEstimate() :  _startedTime(QDateTime::currentMSecsSinceEpoch()), _agvEtaMSecs(0),_effectivProgressPerSec(0),_sampleCount(1) {}
+            EtaEstimate() :  _startedTime(QDateTime::currentMSecsSinceEpoch()), _agvEtaMSecs(0),_effectivProgressPerSec(0),_divergince(0),_sampleCount(1) {}
             
-            static const int MAX_AVG_DIVIDER=60;
-            static const int INITAL_WAIT_TIME=5;
+            static const int MAX_AVG_DIVIDER=2048;
+            static const int MIN_SAMPLE_COUNT=10;
+            static const int INITAL_WAIT_TIME=0;
+            static constexpr float MAX_STATS_DIVERGANCE_RATIO=0.0833f;
+            static constexpr float PREFFERED_STATS_DIVERGANCE_RATIO=0.05f;
+            static constexpr float GOOD_DIVERGANCE_RATIO=0.005f;
             
             quint64     _startedTime ;
             quint64     _agvEtaMSecs;
             quint64     _effectivProgressPerSec;
+            float       _divergince;
             float      _sampleCount;
             
             /**
@@ -65,6 +70,7 @@ namespace Progress
              */
             void reset() {
                 _startedTime = QDateTime::currentMSecsSinceEpoch();
+                _divergince = 0;
                 _sampleCount =1;
                 _effectivProgressPerSec = _agvEtaMSecs = 0;
             }
@@ -75,13 +81,41 @@ namespace Progress
              * @param quint64 total the total amout that should be completed.
              */
             void updateTime(quint64 completed, quint64 total) {
-                quint64 elapsedTime = QDateTime::currentMSecsSinceEpoch() -  this->_startedTime ;
-                //don't start until you have some good data to process, prevents jittring estiamtes at the start of the syncing process                    
-                if(total != 0 && completed != 0 && elapsedTime > INITAL_WAIT_TIME ) {
-                    if(_sampleCount < MAX_AVG_DIVIDER) { _sampleCount+=0.01f; }
-                    // (elapsedTime-1) is an hack to avoid float "rounding" issue (ie. 0.99999999999999999999....)
-                    _agvEtaMSecs = _agvEtaMSecs + (((static_cast<float>(total) / completed) * elapsedTime) - (elapsedTime-1)) - this->getEtaEstimate();
+                quint64 elapsedTime = QDateTime::currentMSecsSinceEpoch() -  this->_startedTime;
+                //don't start until you have some good data to process, prevents jittring estiamtes at the start of the syncing process
+                if(completed == 0) {
+                    this->reset();
+                    return;
+                }
+                if(total != 0 && elapsedTime > INITAL_WAIT_TIME ) {
+                     // (elapsedTime-1) is an hack to avoid float "un-rounding" issue (ie. 0.99999999999999999999....)
+                    quint64 currentEstimate = (((static_cast<float>(total) / completed) * elapsedTime) - (elapsedTime-1));
+                    
+                    this->updateSampleCount();
+                   
+                    _agvEtaMSecs += currentEstimate - this->getEtaEstimate();
                     _effectivProgressPerSec = ( total - completed ) / (1+this->getEtaEstimate()/1000);
+                    _divergince += (static_cast<float>(currentEstimate+this->_startedTime) / (this->getEtaEstimate()+this->_startedTime)) - ( _divergince / _sampleCount );
+                   
+                    
+                }
+            }
+            
+            /**
+             * Increase or  decresce the eta sampling based on consistency of it.
+             */
+            void updateSampleCount() {
+                float diff = 0; 
+                if( _sampleCount < MAX_AVG_DIVIDER && (this->getSampleDivergance() > PREFFERED_STATS_DIVERGANCE_RATIO || !this->isEstimationReady() ) ) {
+                    diff = 1;
+                    
+                } else if (this->getSampleDivergance() < GOOD_DIVERGANCE_RATIO && _sampleCount > MIN_SAMPLE_COUNT ) {
+                    diff = -1;  
+                }
+                if(diff) {
+                    _sampleCount += diff;
+                    _agvEtaMSecs = _agvEtaMSecs * (1+ (diff/_sampleCount));
+                    _divergince =_divergince * (1+ (diff/_sampleCount));
                 }
             }
             
@@ -90,7 +124,7 @@ namespace Progress
              * @return quint64 the estimate amount of milliseconds to end the process.
              */
             quint64 getEtaEstimate() const {
-               return _agvEtaMSecs / _sampleCount;
+               return  _agvEtaMSecs / _sampleCount;
            }
             
            /**
@@ -99,6 +133,19 @@ namespace Progress
             */
            quint64 getEstimatedBandwidth() const {
                return _effectivProgressPerSec;
+           }
+           /**
+            * Check if the estimation is ready and will return good information.
+            */ 
+           float getSampleDivergance() const {
+               return  sqrt( (1- (_divergince / _sampleCount)) * (1- (_divergince / _sampleCount)) ) ;
+           }
+           
+           /**
+            * Check if the estimation is ready and will return good information.
+            */ 
+           bool isEstimationReady() const{
+               return _sampleCount > MIN_SAMPLE_COUNT && this->getSampleDivergance() < MAX_STATS_DIVERGANCE_RATIO;
            }
         };
         EtaEstimate _totalEtaEstimate;
@@ -161,7 +208,8 @@ namespace Progress
          */
         EtaEstimate getFileEstimate(const SyncFileItem &item) const {
             return _currentItems[item._file]._etaEstimate;
-        }               
+        }
+        
     };
 
     OWNCLOUDSYNC_EXPORT QString asActionString( const SyncFileItem& item );
@@ -169,6 +217,13 @@ namespace Progress
 
     OWNCLOUDSYNC_EXPORT bool isWarningKind( SyncFileItem::Status );
 
+    /**
+     * @brief Get the estimated finish time as printable string from a progess EtaEstimate object.
+     * @param EtaEstimate estimate the finish estimate object.
+     * @param uint precision the amount of sub dviving scale to include in the result.
+     * @return an HMS representation of the milliseconds value.
+     */
+    OWNCLOUDSYNC_EXPORT QString estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision);
 }
 
 /**
