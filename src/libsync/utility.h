@@ -63,9 +63,23 @@ namespace Utility
 
 
     /**
+     * Used by Utility::timeToDescriptiveString() function to build its return string.
+     * /TODO change to initializers list  when possible. 
+     */
+    static QList<QPair<QString,quint32> > timeMapping = QList<QPair<QString,quint32> >() 
+                                                    << QPair<QString,quint32>("%1 years",86400*365) 
+                                                    << QPair<QString,quint32>("%1 months",86400*30) 
+                                                    << QPair<QString,quint32>("%1 days",86400) 
+                                                    << QPair<QString,quint32>("%1h",3600) 
+                                                    << QPair<QString,quint32>("%1m",60); 
+                                                    //<< QPair<QString,quint32>("%1s",1);
+    
+    /**
      * @brief Convert milliseconds to HMS string.
      * @param quint64 msecs the milliseconds to convert to string.
      * @param uint precision the amount of sub dviving scale to include in the result.
+     * @param QString seperator the  separator to us between time mapping types
+     * @param bool specific
      * @return an HMS representation of the milliseconds value.
      */
     OWNCLOUDSYNC_EXPORT QString timeToDescriptiveString(QList<QPair<QString,quint32> > &timeMapping, quint64 msecs, quint8 precision, QString separator, bool specific);

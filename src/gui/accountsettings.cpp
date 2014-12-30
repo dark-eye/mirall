@@ -201,6 +201,7 @@ void AccountSettings::slotFolderWizardAccepted()
 
     if (!FolderMan::ensureJournalGone( sourceFolder ))
         return;
+
     folderMan->addFolderDefinition(alias, sourceFolder, targetPath, selectiveSyncBlackList );
     Folder *f = folderMan->setupFolderFromConfigFile( alias );
     slotAddFolder( f );
@@ -266,7 +267,6 @@ void AccountSettings::folderToModelItem( QStandardItem *item, Folder *f, bool ac
     item->setData( f->alias(),             FolderStatusDelegate::FolderAliasRole );
     item->setData( f->syncPaused(),        FolderStatusDelegate::FolderSyncPaused );
     item->setData( accountConnected,       FolderStatusDelegate::FolderAccountConnected );
-
     SyncResult res = f->syncResult();
     SyncResult::Status status = res.status();
 
@@ -279,27 +279,28 @@ void AccountSettings::folderToModelItem( QStandardItem *item, Folder *f, bool ac
             item->setData( theme->folderDisabledIcon( ), FolderStatusDelegate::FolderStatusIconRole ); // size 48 before
             _wasDisabledBefore = false;
         } else {
-        if( status == SyncResult::SyncPrepare ) {
-            if( _wasDisabledBefore ) {
-                // if the folder was disabled before, set the sync icon
+            if( status == SyncResult::SyncPrepare ) {
+                if( _wasDisabledBefore ) {
+                    // if the folder was disabled before, set the sync icon
+                    item->setData( theme->syncStateIcon( SyncResult::SyncRunning), FolderStatusDelegate::FolderStatusIconRole );
+                }  // we keep the previous icon for the SyncPrepare state.
+            } else if( status == SyncResult::Undefined ) {
+                // startup, the sync was never done.
+                qDebug() << "XXX FIRST time sync, setting icon to sync running!";
                 item->setData( theme->syncStateIcon( SyncResult::SyncRunning), FolderStatusDelegate::FolderStatusIconRole );
-            }  // we keep the previous icon for the SyncPrepare state.
-        } else if( status == SyncResult::Undefined ) {
-            // startup, the sync was never done.
-            qDebug() << "XXX FIRST time sync, setting icon to sync running!";
-            item->setData( theme->syncStateIcon( SyncResult::SyncRunning), FolderStatusDelegate::FolderStatusIconRole );
-        } else {
-            // kepp the previous icon for the prepare phase.
-            if( status == SyncResult::Problem) {
-                item->setData( theme->syncStateIcon( SyncResult::Success), FolderStatusDelegate::FolderStatusIconRole );
             } else {
-                item->setData( theme->syncStateIcon( status ), FolderStatusDelegate::FolderStatusIconRole );
+                // kepp the previous icon for the prepare phase.
+                if( status == SyncResult::Problem) {
+                    item->setData( theme->syncStateIcon( SyncResult::Success), FolderStatusDelegate::FolderStatusIconRole );
+                } else {
+                    item->setData( theme->syncStateIcon( status ), FolderStatusDelegate::FolderStatusIconRole );
                 }
             }
         }
     } else {
         item->setData( theme->folderOfflineIcon(), FolderStatusDelegate::FolderStatusIconRole);
     }
+
     item->setData( theme->statusHeaderText( status ), FolderStatusDelegate::FolderStatus );
 
     if( errorList.isEmpty() ) {
@@ -452,60 +453,60 @@ void AccountSettings::slotEnableCurrentFolder()
 
     if( selected.isValid() ) {
         QString alias = _model->data( selected, FolderStatusDelegate::FolderAliasRole ).toString();
+
         if( alias.isEmpty() ) {
             qDebug() << "Empty alias to enable.";
             return;
         }
-            FolderMan *folderMan = FolderMan::instance();
 
-            qDebug() << "Application: enable folder with alias " << alias;
-            bool terminate = false;
+        FolderMan *folderMan = FolderMan::instance();
+
+        qDebug() << "Application: enable folder with alias " << alias;
+        bool terminate = false;
         bool currentlyPaused = false;
 
-            // this sets the folder status to disabled but does not interrupt it.
-            Folder *f = folderMan->folder( alias );
-            if (!f) {
-                return;
-            }
-
+        // this sets the folder status to disabled but does not interrupt it.
+        Folder *f = folderMan->folder( alias );
+        if (!f) {
+            return;
+        }
         currentlyPaused = f->syncPaused();
         if( ! currentlyPaused ) {
-                // check if a sync is still running and if so, ask if we should terminate.
-                if( f->isBusy() ) { // its still running
+            // check if a sync is still running and if so, ask if we should terminate.
+            if( f->isBusy() ) { // its still running
 #if defined(Q_OS_MAC)
-                    QWidget *parent = this;
-                    Qt::WindowFlags flags = Qt::Sheet;
+                QWidget *parent = this;
+                Qt::WindowFlags flags = Qt::Sheet;
 #else
-                    QWidget *parent = 0;
-                    Qt::WindowFlags flags = Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint; // default flags
+                QWidget *parent = 0;
+                Qt::WindowFlags flags = Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint; // default flags
 #endif
-                    QMessageBox msgbox(QMessageBox::Question, tr("Sync Running"),
-                                       tr("The syncing operation is running.<br/>Do you want to terminate it?"),
-                                       QMessageBox::Yes | QMessageBox::No, parent, flags);
-                    msgbox.setDefaultButton(QMessageBox::Yes);
-                    int reply = msgbox.exec();
-                    if ( reply == QMessageBox::Yes )
-                        terminate = true;
-                    else
-                        return; // do nothing
-                }
+                QMessageBox msgbox(QMessageBox::Question, tr("Sync Running"),
+                                   tr("The syncing operation is running.<br/>Do you want to terminate it?"),
+                                   QMessageBox::Yes | QMessageBox::No, parent, flags);
+                msgbox.setDefaultButton(QMessageBox::Yes);
+                int reply = msgbox.exec();
+                if ( reply == QMessageBox::Yes )
+                    terminate = true;
+                else
+                    return; // do nothing
             }
+        }
 
-            // message box can return at any time while the thread keeps running,
-            // so better check again after the user has responded.
-            if ( f->isBusy() && terminate ) {
-                f->slotTerminateSync();
-            }
-
+        // message box can return at any time while the thread keeps running,
+        // so better check again after the user has responded.
+        if ( f->isBusy() && terminate ) {
+            f->slotTerminateSync();
+        }
         f->setSyncPaused(!currentlyPaused); // toggle the pause setting
         folderMan->slotSetFolderPaused( alias, !currentlyPaused );
 
-            // keep state for the icon setting.
+        // keep state for the icon setting.
         if( currentlyPaused ) _wasDisabledBefore = true;
 
-            slotUpdateFolderState (f);
-            // set the button text accordingly.
-            slotFolderActivated( selected );
+        slotUpdateFolderState (f);
+        // set the button text accordingly.
+        slotFolderActivated( selected );
     }
 }
 
@@ -596,6 +597,7 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
 {
     QStandardItem *item = itemForFolder( folder );
     if( !item ) return;
+
     // switch on extra space.
     item->setData( QVariant(true), FolderStatusDelegate::AddProgressSpace );
 
@@ -632,18 +634,19 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
     QString kindString = Progress::asActionString(curItem);
 
 
+
     QString fileProgressString;
     if (Progress::isSizeDependent(curItem._instruction)) {
         QString s1 = Utility::octetsToString( curItemProgress );
         QString s2 = Utility::octetsToString( curItem._size );
         quint64 estimatedBw = progress.getFileEstimate(curItem).getEstimatedBandwidth();
         if (estimatedBw) {
-        //: Example text: "uploading foobar.png (1MB of 2MB) time left 2 minutes at a rate of 24Kb/s"
-        fileProgressString = tr("%1 %2 (%3 of %4) %5 left at a rate of %6/s")
-            .arg(kindString, itemFileName, s1, s2,
-                    Utility::timeToDescriptiveString(progress.getFileEstimate(curItem).getEtaEstimate(), 3, " ", true),
+            //: Example text: "uploading foobar.png (1MB of 2MB) time left 2 minutes at a rate of 24Kb/s"
+            fileProgressString = tr("%1 %2 (%3 of %4) %5  at a rate of %6/s")
+                .arg(kindString, itemFileName, s1, s2,
+                    Progress::estimateToString(progress.getFileEstimate(curItem),3),
                     Utility::octetsToString(estimatedBw) );
-    } else {
+        } else {
             //: Example text: "uploading foobar.png (2MB of 2MB)"
             fileProgressString = tr("%1 %2 (%3 of %4)") .arg(kindString, itemFileName, s1, s2);
         }
@@ -658,12 +661,12 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
     quint64 currentFile =  progress._completedFileCount + progress._currentItems.count();
     QString overallSyncString;
     if (progress._totalSize > 0) {
-    QString s1 = Utility::octetsToString( completedSize );
-    QString s2 = Utility::octetsToString( progress._totalSize );
-        overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time left %5")
-        .arg(s1, s2)
-        .arg(currentFile).arg(progress._totalFileCount)
-        .arg( Utility::timeToDescriptiveString(progress.totalEstimate().getEtaEstimate(), 3, " ", true) );
+        QString s1 = Utility::octetsToString( completedSize );
+        QString s2 = Utility::octetsToString( progress._totalSize );
+        overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time %5")
+            .arg(s1, s2)
+            .arg(currentFile).arg(progress._totalFileCount)
+            .arg( Progress::estimateToString(progress.totalEstimate(),3) );
     } else if (progress._totalFileCount > 0) {
         // Don't attemt to estimate the time left if there is no kb to transfer.
         overallSyncString = tr("file %1 of %2") .arg(currentFile).arg(progress._totalFileCount);
