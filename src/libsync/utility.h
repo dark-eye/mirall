@@ -41,10 +41,7 @@ namespace Utility
     OWNCLOUDSYNC_EXPORT qint64 freeDiskSpace(const QString &path, bool *ok = 0);
     OWNCLOUDSYNC_EXPORT QString toCSyncScheme(const QString &urlStr);
     /** Like QLocale::toString(double, 'f', prec), but drops trailing zeros after the decimal point */
-
     OWNCLOUDSYNC_EXPORT bool doesSetContainPrefix(const QSet<QString> &l, const QString &p);
-
-
 
     /**
      * @brief compactFormatDouble - formats a double value human readable.
@@ -63,24 +60,12 @@ namespace Utility
     OWNCLOUDSYNC_EXPORT QDateTime qDateTimeFromTime_t(qint64 t);
     OWNCLOUDSYNC_EXPORT qint64 qDateTimeToTime_t(const QDateTime &t);
 
-    /**
-     * Used by Utility::timeToDescriptiveString() function to build its return string.
-     * /TODO change to initializers list  when possible. 
-     */
-    static QList<QPair<QString,quint32> > timeMapping = QList<QPair<QString,quint32> >() 
-                                                    << QPair<QString,quint32>("%1 years",86400*365) 
-                                                    << QPair<QString,quint32>("%1 months",86400*30) 
-                                                    << QPair<QString,quint32>("%1 days",86400) 
-                                                    << QPair<QString,quint32>("%1h",3600) 
-                                                    << QPair<QString,quint32>("%1m",60); 
-                                                    //<< QPair<QString,quint32>("%1s",1);
-    
+
+
     /**
      * @brief Convert milliseconds to HMS string.
      * @param quint64 msecs the milliseconds to convert to string.
      * @param uint precision the amount of sub dviving scale to include in the result.
-     * @param QString seperator the  separator to us between time mapping types
-     * @param bool specific
      * @return an HMS representation of the milliseconds value.
      */
     OWNCLOUDSYNC_EXPORT QString timeToDescriptiveString(QList<QPair<QString,quint32> > &timeMapping, quint64 msecs, quint8 precision, QString separator, bool specific);
@@ -97,13 +82,11 @@ namespace Utility
      * @return bool which is true for systems with dark systray.
      */
     OWNCLOUDSYNC_EXPORT bool hasDarkSystray();
-
     // convinience OS detection methods
     OWNCLOUDSYNC_EXPORT bool isWindows();
     OWNCLOUDSYNC_EXPORT bool isMac();
     OWNCLOUDSYNC_EXPORT bool isUnix();
     OWNCLOUDSYNC_EXPORT bool isLinux(); // use with care
-
     // crash helper for --debug
     OWNCLOUDSYNC_EXPORT void crash();
 

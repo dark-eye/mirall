@@ -57,7 +57,6 @@ ownCloudGui::ownCloudGui(Application *parent) :
 {
     _tray = new Systray();
     _tray->setParent(this);
-
     // for the beginning, set the offline icon until the account was verified
     _tray->setIcon( Theme::instance()->folderOfflineIcon(true));
 
@@ -101,6 +100,7 @@ ownCloudGui::ownCloudGui(Application *parent) :
 
 void ownCloudGui::setupOverlayIcons()
 {
+
 #ifdef Q_OS_MAC
     const QLatin1String finderExtension("/Library/ScriptingAdditions/SyncStateFinder.osax");
     if(QFile::exists(finderExtension) ) {
@@ -176,7 +176,6 @@ void ownCloudGui::slotSyncStateChange( const QString& alias )
     if( alias.isEmpty() ) {
         return; // Valid, just a general GUI redraw was needed.
     }
-
     qDebug() << "Sync state changed for folder " << alias << ": "  << result.statusString();
 
     if (result.status() == SyncResult::Success || result.status() == SyncResult::Error) {
@@ -203,6 +202,7 @@ void ownCloudGui::slotAccountStateChanged()
 
 void ownCloudGui::setConnectionErrors( bool /*connected*/, const QStringList& fails )
 {
+
     _startupFails = fails; // store that for the settings dialog once it appears.
     if( !_settingsDialog.isNull() ) {
         _settingsDialog->setGeneralErrors( _startupFails );
@@ -251,11 +251,11 @@ void ownCloudGui::slotComputeOverallSyncStatus()
         if( overallResult.status() != SyncResult::Undefined ) {
             QStringList allStatusStrings;
             if( map.count() > 0 ) {
-                foreach(Folder* folder, map.values()) {
-                    qDebug() << "Folder in overallStatus Message: " << folder << " with name " << folder->alias();
+            foreach(Folder* folder, map.values()) {
+                qDebug() << "Folder in overallStatus Message: " << folder << " with name " << folder->alias();
                     QString folderMessage = folderMan->statusToString(folder->syncResult().status(), folder->syncPaused());
-                    allStatusStrings += tr("Folder %1: %2").arg(folder->alias(), folderMessage);
-                }
+                allStatusStrings += tr("Folder %1: %2").arg(folder->alias(), folderMessage);
+            }
 
                 trayMessage = allStatusStrings.join(QLatin1String("\n"));
             } else {
@@ -344,11 +344,9 @@ void ownCloudGui::setupContextMenu()
     if (!Theme::instance()->helpUrl().isEmpty()) {
         _contextMenu->addAction(_actionHelp);
     }
-
     if(_actionCrash) {
         _contextMenu->addAction(_actionCrash);
     }
-
     _contextMenu->addSeparator();
     if (isConfigured && isConnected) {
         _contextMenu->addAction(_actionLogout);
@@ -422,7 +420,6 @@ void ownCloudGui::setupActions()
     connect(_actionLogin, SIGNAL(triggered()), _app, SLOT(slotLogin()));
     _actionLogout = new QAction(tr("Sign out"), this);
     connect(_actionLogout, SIGNAL(triggered()), _app, SLOT(slotLogout()));
-
     if(_app->debugMode()) {
         _actionCrash = new QAction(tr("Crash now"), this);
         connect(_actionCrash, SIGNAL(triggered()), _app, SLOT(slotCrash()));
@@ -470,14 +467,14 @@ void ownCloudGui::slotUpdateProgress(const QString &folder, const Progress::Info
                      .arg( progress._currentDiscoveredFolder ));
      } else if (progress._totalSize == 0 ) {
             quint64 currentFile =  progress._completedFileCount + progress._currentItems.count();           
-            _actionStatus->setText( tr("Syncing %1 of %2  (%3)")
+            _actionStatus->setText( tr("Syncing %1 of %2  (%3 left)")
                 .arg( currentFile ).arg( progress._totalFileCount )
-                 .arg(Progress::estimateToString(progress.totalEstimate(),2) ) );
+                 .arg( Utility::timeToDescriptiveString(progress.totalEstimate().getEtaEstimate(), 2, " ",true) ) );
         } else {
          QString totalSizeStr = Utility::octetsToString( progress._totalSize );
-            _actionStatus->setText( tr("Syncing %1 (%2)")
+            _actionStatus->setText( tr("Syncing %1 (%2 left)")
                 .arg( totalSizeStr )
-                .arg( Progress::estimateToString(progress.totalEstimate(),2) ) );
+                .arg( Utility::timeToDescriptiveString(progress.totalEstimate().getEtaEstimate(), 2, " ",true) ) );
         }
 
 
@@ -601,7 +598,6 @@ void ownCloudGui::raiseDialog( QWidget *raiseWidget )
         raiseWidget->showNormal();
         raiseWidget->raise();
         raiseWidget->activateWindow();
-
 #if defined(Q_OS_MAC)
         // viel hilft viel ;-)
         MacWindow::bringToFront(raiseWidget);
