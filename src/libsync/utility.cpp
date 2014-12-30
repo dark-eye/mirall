@@ -300,7 +300,7 @@ QString Utility::timeToDescriptiveString(QList<QPair<QString,quint32> > &timeMap
     bool timeStartFound = false;
    
     for(QList<QPair<QString,quint32> >::Iterator itr = timeMapping.begin(); itr != timeMapping.end() && precision > 0; itr++) {
-        quint64 result = secs / itr->second;        
+        quint64 result = itr == timeMapping.end() ?  qRound64( secs / itr->second )  :  secs / itr->second;
         if(!timeStartFound) {
             if(result == 0 ) {
                 continue;
