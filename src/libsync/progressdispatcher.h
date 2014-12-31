@@ -53,11 +53,12 @@ namespace Progress
             EtaEstimate() :  _startedTime(QDateTime::currentMSecsSinceEpoch()), _agvEtaMSecs(0),_effectivProgressPerSec(0),_divergince(0),_sampleCount(1) {}
             
             static const int MAX_AVG_DIVIDER=2048;
-            static const int MIN_SAMPLE_COUNT=10;
+            static const int MIN_SAMPLE_COUNT=5;
+            static const int PREFFERED_SAMPLE_COUNT=20;
             static const int INITAL_WAIT_TIME=0;
             static constexpr float MAX_STATS_DIVERGANCE_RATIO=0.0833f;
-            static constexpr float PREFFERED_STATS_DIVERGANCE_RATIO=0.05f;
-            static constexpr float GOOD_DIVERGANCE_RATIO=0.005f;
+            static constexpr float PREFFERED_STATS_DIVERGANCE_RATIO=0.04f;
+            static constexpr float GOOD_DIVERGANCE_RATIO=0.0005f;
             
             quint64     _startedTime ;
             quint64     _agvEtaMSecs;
@@ -109,7 +110,7 @@ namespace Progress
                 if( _sampleCount < MAX_AVG_DIVIDER && (this->getSampleDivergance() > PREFFERED_STATS_DIVERGANCE_RATIO || !this->isEstimationReady() ) ) {
                     diff = 1;
                     
-                } else if (this->getSampleDivergance() < GOOD_DIVERGANCE_RATIO && _sampleCount > MIN_SAMPLE_COUNT ) {
+                } else if (this->getSampleDivergance() < GOOD_DIVERGANCE_RATIO && _sampleCount > PREFFERED_SAMPLE_COUNT ) {
                     diff = -1;  
                 }
                 if(diff) {
@@ -221,9 +222,11 @@ namespace Progress
      * @brief Get the estimated finish time as printable string from a progess EtaEstimate object.
      * @param EtaEstimate estimate the finish estimate object.
      * @param uint precision the amount of sub dviving scale to include in the result.
+     * @param trailing the  string to add at the end of the estimate string.
      * @return an HMS representation of the milliseconds value.
      */
     OWNCLOUDSYNC_EXPORT QString estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision);
+    OWNCLOUDSYNC_EXPORT QString estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision,QString trailing);
 }
 
 /**

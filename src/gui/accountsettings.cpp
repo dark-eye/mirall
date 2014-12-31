@@ -666,7 +666,7 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
         overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time %5")
             .arg(s1, s2)
             .arg(currentFile).arg(progress._totalFileCount)
-            .arg( Progress::estimateToString(progress.totalEstimate(),3) );
+            .arg( Progress::estimateToString( progress.totalEstimate(), 3, "") );
     } else if (progress._totalFileCount > 0) {
         // Don't attemt to estimate the time left if there is no kb to transfer.
         overallSyncString = tr("file %1 of %2") .arg(currentFile).arg(progress._totalFileCount);

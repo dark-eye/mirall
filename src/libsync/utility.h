@@ -71,8 +71,8 @@ namespace Utility
                                                     << QPair<QString,quint32>("%1 months",86400*30) 
                                                     << QPair<QString,quint32>("%1 days",86400) 
                                                     << QPair<QString,quint32>("%1h",3600) 
-                                                    << QPair<QString,quint32>("%1m",60); 
-                                                    //<< QPair<QString,quint32>("%1s",1);
+                                                    << QPair<QString,quint32>("%1m",60);
+                                                    //<< QPair<QString,quint32>("%1s",1);//seconds are too jittery removed them until the estimate will be smoother.
     
     /**
      * @brief Convert milliseconds to HMS string.

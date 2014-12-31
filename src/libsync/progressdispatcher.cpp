@@ -89,7 +89,12 @@ bool Progress::isWarningKind( SyncFileItem::Status kind)
 
 }
 
-QString Progress::estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision) 
+QString Progress::estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision)
+{
+    return Progress::estimateToString( estimate, precision, QString(" left")); 
+}
+
+QString Progress::estimateToString(const Progress::Info::EtaEstimate& estimate, quint8 precision,QString trailing) 
 {   
     if(!estimate.isEstimationReady()) {
         return QCoreApplication::translate("Utility","estimating...");
@@ -99,7 +104,7 @@ QString Progress::estimateToString(const Progress::Info::EtaEstimate& estimate, 
     if(msecs / 1000 < Utility::timeMapping.last().second ) {
         return QString("< " + Utility::timeMapping.last().first).arg(1);
     }
-    return QCoreApplication::translate("Utility","%1 left").arg(Utility::timeToDescriptiveString( Utility::timeMapping , msecs, precision, " ", true) );
+    return QCoreApplication::translate("Utility","%1").arg(Utility::timeToDescriptiveString( Utility::timeMapping , msecs, precision, " ", true) ).append(trailing);
 }
 
 
