@@ -56,8 +56,8 @@ namespace Progress
             static const int MIN_SAMPLE_COUNT=5;
             static const int PREFFERED_SAMPLE_COUNT=20;
             static const int INITAL_WAIT_TIME=0;
-            static constexpr float MAX_STATS_DIVERGANCE_RATIO=0.0833f;
-            static constexpr float PREFFERED_STATS_DIVERGANCE_RATIO=0.04f;
+            static constexpr float MAX_STATS_DIVERGANCE_RATIO=0.05f;
+            static constexpr float PREFFERED_STATS_DIVERGANCE_RATIO=0.02f;
             static constexpr float GOOD_DIVERGANCE_RATIO=0.0005f;
             
             quint64     _startedTime ;
