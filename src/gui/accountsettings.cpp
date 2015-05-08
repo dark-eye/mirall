@@ -642,7 +642,7 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
         quint64 estimatedBw = progress.getFileEstimate(curItem).getEstimatedBandwidth();
         if (estimatedBw) {
             //: Example text: "uploading foobar.png (1MB of 2MB) time left 2 minutes at a rate of 24Kb/s"
-            fileProgressString = tr("%1 %2 (%3 of %4) %5  at a rate of %6/s")
+            fileProgressString = tr("%1 %2 (%3 of %4),  %5 at a rate of %6/s")
                 .arg(kindString, itemFileName, s1, s2,
                     Progress::estimateToString(progress.getFileEstimate(curItem),3),
                     Utility::octetsToString(estimatedBw) );
@@ -663,7 +663,7 @@ void AccountSettings::slotSetProgress(const QString& folder, const Progress::Inf
     if (progress._totalSize > 0) {
         QString s1 = Utility::octetsToString( completedSize );
         QString s2 = Utility::octetsToString( progress._totalSize );
-        overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time %5")
+        overallSyncString = tr("%1 of %2, file %3 of %4\nTotal time left %5")
             .arg(s1, s2)
             .arg(currentFile).arg(progress._totalFileCount)
             .arg( Progress::estimateToString( progress.totalEstimate(), 3, "") );
